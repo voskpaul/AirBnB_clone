@@ -1,21 +1,19 @@
 #!/usr/bin/python3
-"""
-This module defines a User class
-"""
-
+"""Defines the User."""
 from models.base_model import BaseModel
 
 
 class User(BaseModel):
-    """
-    This class is responsible for managing user entities.
+    """Represent a User.
+
+    Attributes:
+        email (str): The user mail.
+        password (str): The user password.
+        first_name (str): The first name of the user.
+        last_name (str): The last name of the user.
     """
 
-    def __init__(self):
-        """
-        Initialize a new user instance.
-        """
-        self.email = ""
-        self.password = ""
-        self.first_name = ""
-        self.last_name = ""
+    email = ""
+    password = ""
+    first_name = ""
+    last_name = ""
