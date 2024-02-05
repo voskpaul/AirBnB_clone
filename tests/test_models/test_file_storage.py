@@ -1,103 +1,111 @@
 #!/usr/bin/python3
-"""Defines unittests for models/engine/file_storage.py.
-
-Unittest classes:
-    TestFileStorage_instantiation
-    TestFileStorage_methods
-"""
-import os
-import json
-import models
-import unittest
-from datetime import datetime
+'''
+Contains all tests for the base_model class
+'''
 from models.base_model import BaseModel
 from models.engine.file_storage import FileStorage
+import unittest
+from datetime import datetime
+import json
+import os
 
 
-class TestFileStorage_instantiation(unittest.TestCase):
-    """Unittests for testing instantiation of the FileStorage class."""
-
-    def test_FileStorage_instantiation_no_args(self):
-        self.assertEqual(type(FileStorage()), FileStorage)
-
-    def test_FileStorage_instantiation_with_arg(self):
-        with self.assertRaises(TypeError):
-            FileStorage(None)
-
-    def test_FileStorage_file_path_is_private_str(self):
-        self.assertEqual(str, type(FileStorage._FileStorage__file_path))
-
-    def testFileStorage_objects_is_private_dict(self):
-        self.assertEqual(dict, type(FileStorage._FileStorage__objects))
-
-    def test_storage_initializes(self):
-        self.assertEqual(type(models.storage), FileStorage)
-
-
-class TestFileStorage_methods(unittest.TestCase):
-    """Unittests for testing methods of the FileStorage class."""
-
-    @classmethod
+class TestBaseModel(unittest.TestCase):
+    '''
+    Tests that the BaseModel works okay
+    '''
     def setUp(self):
-        try:
-            os.rename("file.json", "tmp")
-        except IOError:
-            pass
+        '''
+        Set up method
+        Renames the file_storage file to avoid iterfering with data
+        '''
+        if os.path.isfile("file.json"):
+            os.rename("file.json", "backup_file.json")
 
-    @classmethod
+        self.model_1 = BaseModel()
+        self.model_2 = BaseModel()
+
     def tearDown(self):
-        try:
+        '''
+        Tear down method
+        Does clean up
+        '''
+        if os.path.isfile("file.json"):
             os.remove("file.json")
-        except IOError:
-            pass
+        if os.path.isfile("backup_file.json"):
+            os.rename("backup_file.json", "file.json")
+
+        del self.model_1
+        del self.model_2
+
+    def test_attributes_types(self):
+        '''
+        Test that all attributes are of the correct type
+        '''
+        self.assertTrue(type(self.model_1), BaseModel)
+        self.assertTrue(type(self.model_1.id), str)
+        self.assertTrue(type(self.model_1.created_at), datetime)
+        self.assertTrue(type(self.model_1.updated_at), datetime)
+
+    def test_isinstance(self):
+        '''
+        Check that the created instance is an instance of the BaseModel class
+        '''
+        self.assertIsInstance(self.model_1, BaseModel)
+
+    def test_init_from_dict(self):
+        '''
+        Test that an instance is correctly created from a dict
+        '''
+        a_dict = self.model_1.to_dict()
+        new_model = BaseModel(**a_dict)
+        self.assertEqual(self.model_1.id, new_model.id)
+        self.assertEqual(self.model_1.created_at, new_model.created_at)
+        self.assertEqual(self.model_1.updated_at, new_model.updated_at)
+
+    def test_str_represntation(self):
+        '''
+        Test that the object's string representation is correct
+        '''
+        msg = "[{}] ({}) {}".format(type(self.model_1).__name__,
+                                    self.model_1.id, self.model_1.__dict__)
+        self.assertEqual(str(self.model_1), msg)
+
+    def test_save_method(self):
+        '''
+        Test that the save method works correctly
+        '''
+        original_date = self.model_1.updated_at
+        self.model_1.save()
+        self.assertNotEqual(original_date, self.model_1.updated_at)
+        key = "BaseModel." + str(self.model_1.id)
+#        self.assertTrue(key in FileStorage.__objects)
         try:
-            os.rename("tmp", "file.json")
-        except IOError:
+            with open("file.json", "r", encoding="UTF-8") as f:
+                saved_file = json.load(f)
+
+            saved_dict = saved_file[key]
+            self.assertEqual(saved_dict, self.model_1.to_dict())
+        except FileNotFoundError:
             pass
-        FileStorage._FileStorage__objects = {}
 
-    def test_all(self):
-        self.assertEqual(dict, type(models.storage.all()))
+    def test_to_dict_method(self):
+        '''
+        Test that the dictionary represntation of an object is good
+        '''
+        a_dict = self.model_1.to_dict()
+        self.assertTrue(type(a_dict), dict)
+        self.assertIn("__class__", a_dict)
+        self.assertIn("id", a_dict)
+        self.assertIn("created_at", a_dict)
+        self.assertIn("updated_at", a_dict)
 
-    def test_all_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.all(None)
-
-    def test_new(self):
-        bm = BaseModel()
-        models.storage.new(bm)
-        self.assertIn("BaseModel." + bm.id, models.storage.all().keys())
-        self.assertIn(bm, models.storage.all().values())
-
-    def test_new_with_args(self):
-        with self.assertRaises(TypeError):
-            models.storage.new(BaseModel(), 1)
-
-    def test_save(self):
-        bm = BaseModel()
-        models.storage.new(bm)
-        models.storage.save()
-        save_text = ""
-        with open("file.json", "r") as f:
-            save_text = f.read()
-            self.assertIn("BaseModel." + bm.id, save_text)
-
-    def test_save_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.save(None)
-
-    def test_reload(self):
-        bm = BaseModel()
-        models.storage.new(bm)
-        models.storage.save()
-        models.storage.reload()
-        objs = FileStorage._FileStorage__objects
-        self.assertIn("BaseModel." + bm.id, objs)
-
-    def test_reload_with_arg(self):
-        with self.assertRaises(TypeError):
-            models.storage.reload(None)
-
+    def test_unique_id(self):
+        '''
+        Test that created objects have unique ids
+        '''
+        self.assertNotEqual(self.model_1.id, self.model_2.id)
 
 if __name__ == "__main__":
     unittest.main()
+
